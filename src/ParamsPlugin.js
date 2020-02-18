@@ -7,20 +7,28 @@ import styled from "@emotion/styled";
 
 const PLUGIN_NAME = 'ParamsPlugin';
 
-function HotelRoute(props) {
-
-  console.log('Hotel Route', props);
+/**
+ * Workaround for path matching with react-router takes a path and returns the paths in it's render props.
+ * @param props
+ * @returns {*}
+ * @constructor
+ */
+function PathRoute(props) {
 
   const { location } = props.route;
 
-  const matches = location.pathname
-    .split('/')
-    .slice(1, -1);
-  const room_number = matches[1];
-  const path = matches[0];
-  console.log('path', path);
-  return props.render({path, room_number: room_number});
+  // workaround - splits the route
+  const noSlashPath = location.pathname[location.pathname.length - 1] === '/'
+    ? location.pathname.slice(1, -1)
+    : location.pathname;
+  const paths = noSlashPath
+    .replace(/:/, '')
+    .split('/');
+
+  return props.render({paths});
 }
+
+// Demo Component
 
 const HotelMessage = styled.div`
   display: flex;
@@ -38,15 +46,13 @@ const HotelMessage = styled.div`
 class Hotel extends React.Component {
 
   render() {
-    console.log('props', this.props);
-    const { roomNumber, path } = this.props;
+    const  { paths } = this.props;
 
-    if (roomNumber && path) {
-
+    if (paths) {
       return (
         <HotelMessage>
-          <h3>Thank you for visiting the { path } </h3>
-          <div> Your Room number is: {roomNumber} </div>
+          <h3>Thank you for visiting the { paths[0] } </h3>
+          <div> Your Room number is: { paths[1] } </div>
         </HotelMessage>
       );
     }
@@ -57,6 +63,8 @@ class Hotel extends React.Component {
     );
   }
 }
+
+// end / demo component
 
 export default class ParamsPlugin extends FlexPlugin {
   constructor() {
@@ -73,20 +81,7 @@ export default class ParamsPlugin extends FlexPlugin {
   init(flex, manager) {
     this.registerReducers(manager);
 
-    const options = { sortOrder: -1 };
-
-    flex.AgentDesktopView
-      .Panel1
-      .Content
-      .add(
-        <CustomTaskListContainer
-          key="custom-task-list"
-          manager={manager}
-          flex={flex}
-        />,
-        options
-      );
-
+    // Example of using dynamic path values
 
     flex.ViewCollection
       .Content
@@ -96,15 +91,13 @@ export default class ParamsPlugin extends FlexPlugin {
           key={'hotel-view'}
           route={{ path: '/hotel' }}
         >
-          <HotelRoute
+          <PathRoute
             path={'/hotel/:room_number'}
             name={'hotel'}
-            render={({path, room_number}) => {
-              console.log('match', path, room_number);
+            render={({paths}) => {
               return (
                 <Hotel
-                  path={path}
-                  roomNumber={room_number}
+                  paths={paths}
                 />
               );
             }}
